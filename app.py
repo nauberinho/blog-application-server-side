@@ -5,12 +5,15 @@ import os
 import graphene
 from graphene_sqlalchemy import SQLAlchemyObjectType, SQLAlchemyConnectionField
 from flask_graphql import GraphQLView
+from flask_cors import CORS
 from termcolor import colored
+from datetime import date
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # App Initialization
 app = Flask(__name__)
+CORS(app)
 app.debug = True
 
 # Configs
@@ -28,6 +31,7 @@ class User(db.Model):
     uuid = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(256), index=True, unique=True)
     posts = db.relationship('Post', backref='author')
+    # created = db.Column(db.String)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -39,6 +43,7 @@ class Post(db.Model):
     title = db.Column(db.String(256), index=True)
     body = db.Column(db.Text)
     author_id = db.Column(db.Integer, db.ForeignKey('users.uuid'))
+    # created = db.Column(db.String)
 
     def __repr__(self):
         return '<Post %r>' % self.title
@@ -58,14 +63,14 @@ class Query(graphene.ObjectType):
     node = graphene.relay.Node.Field()
 
     all_posts = SQLAlchemyConnectionField(PostObject)
-    get_post = graphene.Field(PostObject, uuid = graphene.String())
-    def resolve_get_post(self, info, uuid):
+    post = graphene.Field(PostObject, uuid = graphene.String())
+    def resolve_post(self, info, uuid):
         query = PostObject.get_query(info)
         return query.filter(Post.uuid == uuid).first()
 
     all_users = SQLAlchemyConnectionField(UserObject)
-    get_user = graphene.Field(UserObject, uuid = graphene.String())
-    def resolve_get_user(self, info, uuid):
+    user = graphene.Field(UserObject, uuid = graphene.String())
+    def resolve_user(self, info, uuid):
         query = UserObject.get_query(info)
         return query.filter(User.uuid == uuid).first()
 
@@ -85,6 +90,7 @@ class CreatePost(graphene.Mutation):
 
         if user is not None:
             post.author = user
+            # post.created = date.today()
 
         db.session.add(post)
         db.session.commit()
